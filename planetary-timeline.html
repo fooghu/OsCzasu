@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tranzyty Powolnych Planet</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #f5f2ec;
+    --bg3:          #ffffff;
+    --border:       rgba(0,0,0,0.10);
+    --border-gold:  rgba(160,120,60,0.30);
+    --text:         #2a2520;
+    --text-dim:     #7a7060;
+    --text-mid:     #4a4035;
+    --gold:         #8a6820;
+    --gold-dim:     #b8962a;
+    --now-line:     #c06020;
+    --track-bg:     rgba(0,0,0,0.04);
+    --shadow:       0 2px 12px rgba(0,0,0,0.10);
+    --shadow-lg:    0 6px 28px rgba(0,0,0,0.14);
+    --tick-line:    rgba(0,0,0,0.15);
+    --tick-mid:     rgba(0,0,0,0.32);
+    --tick-major:   rgba(0,0,0,0.50);
+    --tick-text:    #9a8e7a;
+    --tick-text-m:  #5a4a2a;
+    --divider:      rgba(0,0,0,0.07);
+  }
+
+  body.dark {
+    --bg:           #080b14;
+    --bg3:          #111827;
+    --border:       rgba(255,255,255,0.06);
+    --border-gold:  rgba(200,169,110,0.20);
+    --text:         #e2d9c8;
+    --text-dim:     #6a6050;
+    --text-mid:     #a09080;
+    --gold:         #c8a96e;
+    --gold-dim:     #7a6240;
+    --now-line:     #e8a040;
+    --track-bg:     rgba(255,255,255,0.03);
+    --shadow:       0 2px 16px rgba(0,0,0,0.40);
+    --shadow-lg:    0 8px 32px rgba(0,0,0,0.60);
+    --tick-line:    rgba(200,169,110,0.18);
+    --tick-mid:     rgba(200,169,110,0.35);
+    --tick-major:   rgba(200,169,110,0.55);
+    --tick-text:    #6a6050;
+    --tick-text-m:  #9a8860;
+    --divider:      rgba(200,169,110,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    min-height: 100vh;
+    transition: background 0.35s, color 0.35s;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 0;
+    opacity: 0; transition: opacity 0.5s;
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.55) 0%, transparent 100%),
+      radial-gradient(1px 1px at 44%  7%, rgba(255,255,255,0.38) 0%, transparent 100%),
+      radial-gradient(1px 1px at 78% 14%, rgba(255,255,255,0.45) 0%, transparent 100%),
+      radial-gradient(1px 1px at 31% 62%, rgba(255,255,255,0.28) 0%, transparent 100%),
+      radial-gradient(1px 1px at 68% 54%, rgba(255,255,255,0.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 91% 38%, rgba(255,255,255,0.40) 0%, transparent 100%),
+      radial-gradient(2px 2px at 24% 44%, rgba(200,169,110,0.22) 0%, transparent 100%),
+      radial-gradient(2px 2px at 64% 29%, rgba(107,140,218,0.22) 0%, transparent 100%);
+  }
+  body.dark::before { opacity: 1; }
+
+  /* ── LAYOUT ── */
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 1400px; margin: 0 auto;
+    padding: 36px 20px 60px;
+  }
+
+  /* ── DARK TOGGLE ── */
+  #darkToggle {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--border-gold);
+    background: var(--bg3); box-shadow: var(--shadow);
+    cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    user-select: none; flex-shrink: 0;
+  }
+  #darkToggle:hover { box-shadow: var(--shadow-lg); }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: center; justify-content: center;
+    gap: 14px; margin-bottom: 28px; position: relative;
+  }
+  .header-text { text-align: center; }
+  .header-author {
+    font-family: 'Cinzel', serif; font-size: 0.62rem;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); margin-top: 4px; opacity: 0.75;
+    transition: color 0.3s;
+  }
+  header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.3rem, 3vw, 2rem);
+    font-weight: 600; color: var(--gold);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 6px; transition: color 0.3s;
+  }
+  header p {
+    color: var(--text-dim); font-size: 0.9rem;
+    font-style: italic; letter-spacing: 0.04em; transition: color 0.3s;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    justify-content: center; margin-bottom: 18px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 7px;
+    cursor: pointer;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px 5px 8px;
+    box-shadow: var(--shadow);
+    transition: background 0.3s, border-color 0.3s, opacity 0.2s;
+  }
+  .legend-item.hidden { opacity: 0.30; }
+  .legend-dot  { width: 22px; height: 3px; border-radius: 2px; }
+  .legend-sym  { font-size: 1.1rem; line-height: 1; }
+  .legend-name {
+    font-family: 'Cinzel', serif; font-size: 0.62rem;
+    letter-spacing: 0.07em; color: var(--text-mid);
+    text-transform: uppercase; transition: color 0.3s;
+  }
+
+  /* ── TIMELINE CARD ── */
+  .timeline-wrap {
+    background: var(--bg3); border: 1px solid var(--border-gold);
+    border-radius: 14px; padding: 20px 0 16px;
+    box-shadow: var(--shadow-lg);
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .chart-scroll { overflow-x: auto; }
+  .chart-inner  { min-width: 900px; }
+
+  /* ── YEAR AXIS ── */
+  .year-axis {
+    position: relative; height: 34px;
+    margin: 0 110px 8px;
+    border-bottom: 1px solid var(--border-gold);
+    transition: border-color 0.3s;
+  }
+  .year-tick {
+    position: absolute; top: 0;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .tick-line {
+    width: 1px; background: var(--tick-line); transition: background 0.3s;
+  }
+  .year-tick.minor .tick-line { height: 7px; }
+  .year-tick.mid   .tick-line { height: 11px; background: var(--tick-mid); }
+  .year-tick.major .tick-line { height: 16px; background: var(--tick-major); }
+  .year-tick span {
+    font-family: 'Cinzel', serif; font-size: 0.58rem;
+    white-space: nowrap; transition: color 0.3s;
+  }
+  .year-tick.mid   span { color: var(--tick-text); }
+  .year-tick.major span { color: var(--tick-text-m); font-weight: 600; }
+
+  /* ── PLANET ROW ── */
+  .planet-row {
+    display: flex; align-items: center;
+    margin-bottom: 5px;
+  }
+  .planet-row.hidden { display: none; }
+
+  .planet-label {
+    width: 110px; flex-shrink: 0;
+    display: flex; align-items: center; gap: 7px;
+    padding: 0 10px 0 16px;
+  }
+  .planet-symbol    { font-size: 1.3rem; line-height: 1; }
+  .planet-name-lbl  {
+    font-family: 'Cinzel', serif; font-size: 0.58rem;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--text-dim); transition: color 0.3s;
+  }
+
+  .planet-track {
+    flex: 1; position: relative; height: 50px;
+    margin-right: 14px;
+    background: var(--track-bg); border-radius: 4px;
+    transition: background 0.3s;
+  }
+
+  /* ── NOW LINE ── */
+  .now-line {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: var(--now-line);
+    box-shadow: 0 0 8px rgba(192,96,32,0.40);
+    z-index: 20; pointer-events: none; transition: background 0.3s;
+  }
+  body.dark .now-line { box-shadow: 0 0 12px rgba(232,160,64,0.60); }
+  .now-label {
+    position: absolute; top: -20px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Cinzel', serif; font-size: 0.55rem;
+    color: var(--now-line); white-space: nowrap;
+    letter-spacing: 0.08em; transition: color 0.3s;
+  }
+
+  /* ── TRANSIT SEGMENTS ── */
+  .transit-seg {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    height: 32px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    border-width: 1px; border-style: solid;
+    transition: filter 0.15s, transform 0.15s;
+  }
+  .transit-seg:hover {
+    filter: brightness(1.10);
+    transform: translateY(-50%) scaleY(1.10);
+    z-index: 10;
+  }
+  .seg-inner {
+    display: flex; align-items: center; gap: 3px;
+    padding: 0 7px; pointer-events: none; overflow: hidden;
+    width: 100%;
+  }
+  .seg-sym  { font-size: 1.15rem; line-height: 1; flex-shrink: 0; }
+  .seg-name {
+    font-family: 'Cinzel', serif; font-size: 0.54rem;
+    letter-spacing: 0.03em; white-space: nowrap;
+    color: rgba(0,0,0,0.60); overflow: hidden; text-overflow: ellipsis;
+  }
+  body.dark .seg-name { color: rgba(255,255,255,0.70); }
+  .seg-dur {
+    font-family: 'Cinzel', serif; font-size: 0.50rem;
+    letter-spacing: 0.03em; white-space: nowrap;
+    color: rgba(0,0,0,0.45); margin-left: auto; flex-shrink: 0;
+  }
+  body.dark .seg-dur { color: rgba(255,255,255,0.50); }
+
+  /* ── ROW DIVIDER ── */
+  .row-divider {
+    height: 1px; background: var(--divider);
+    margin: 3px 0; transition: background 0.3s;
+  }
+
+  /* ── ASPECTS BAR ── */
+  .aspects-section {
+    position: relative;
+    margin: 16px 110px 6px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-gold);
+    transition: border-color 0.3s;
+  }
+  .aspects-title {
+    position: absolute; top: -9px; left: 6px;
+    font-family: 'Cinzel', serif; font-size: 0.55rem;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-dim); background: var(--bg3);
+    padding: 0 7px; transition: color 0.3s, background 0.3s;
+  }
+  .aspects-row {
+    /* fixed height: label(~40px) + stem(14px) + dot(18px) + stem(14px) + label(~40px) */
+    position: relative; height: 126px;
+  }
+  /* dot sits in the vertical centre of the row */
+  .asp-dot {
+    position: absolute;
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.60);
+    transform: translateX(-50%);
+    top: 50%; margin-top: -11px;
+    z-index: 12;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .asp-dot-sym {
+    font-size: 0.60rem; line-height: 1;
+    color: rgba(255,255,255,0.90);
+    pointer-events: none; user-select: none;
+  }
+  /* stem going UP from dot */
+  .asp-stem-up {
+    position: absolute;
+    width: 1px;
+    background: var(--border-gold);
+    transform: translateX(-50%);
+    z-index: 11;
+    transition: background 0.3s;
+  }
+  /* stem going DOWN from dot */
+  .asp-stem-down {
+    position: absolute;
+    width: 1px;
+    background: var(--border-gold);
+    transform: translateX(-50%);
+    z-index: 11;
+    transition: background 0.3s;
+  }
+  
+
+  /* ── BRUSH NAVIGATOR ── */
+  .brush-wrap {
+    margin-top: 14px;
+    background: var(--bg3); border: 1px solid var(--border-gold);
+    border-radius: 10px; padding: 10px 16px 12px;
+    box-shadow: var(--shadow);
+    transition: background 0.3s, border-color 0.3s;
+    user-select: none;
+  }
+  .brush-labels {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .brush-year {
+    font-family: 'Cinzel', serif; font-size: 0.65rem;
+    color: var(--gold); letter-spacing: 0.06em; transition: color 0.3s;
+  }
+  .brush-hint {
+    font-family: 'Crimson Pro', serif;
+    font-style: italic; font-size: 0.75rem;
+    color: var(--text-dim); transition: color 0.3s;
+  }
+  .brush-track {
+    position: relative; height: 28px;
+    background: var(--track-bg); border: 1px solid var(--border);
+    border-radius: 6px; cursor: crosshair;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .brush-sel {
+    position: absolute; top: 0; bottom: 0;
+    background: var(--gold); opacity: 0.16;
+    border-radius: 4px; cursor: grab;
+    transition: opacity 0.2s;
+  }
+  .brush-sel:hover  { opacity: 0.24; }
+  .brush-sel:active { cursor: grabbing; opacity: 0.30; }
+  .brush-handle {
+    position: absolute; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px; height: 26px;
+    background: var(--gold); border-radius: 4px;
+    cursor: ew-resize; z-index: 10;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+  .brush-handle::after {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px; height: 12px;
+    background: rgba(255,255,255,0.45); border-radius: 1px;
+  }
+  .brush-handle:hover { box-shadow: 0 0 8px rgba(138,104,32,0.45); }
+  body.dark .brush-handle:hover { box-shadow: 0 0 10px rgba(200,169,110,0.55); }
+  .brush-axis {
+    position: relative; height: 20px; margin-top: 3px;
+  }
+  .btick {
+    position: absolute; top: 0;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+  }
+  .btick::before {
+    content: ''; display: block; width: 1px;
+    background: var(--tick-line); transition: background 0.3s;
+  }
+  .btick.mid::before   { height: 5px; background: var(--tick-mid); }
+  .btick.major::before { height: 8px; background: var(--tick-major); }
+  .btick span {
+    font-family: 'Cinzel', serif; font-size: 0.52rem;
+    color: var(--tick-text); white-space: nowrap; transition: color 0.3s;
+  }
+
+  footer-note {
+    display: block; text-align: center; margin-top: 20px;
+    font-size: 0.73rem; font-style: italic;
+    color: var(--text-dim); letter-spacing: 0.04em; transition: color 0.3s;
+  }
+
+  /* ── SIDE PANEL ── */
+  
+  body.dark
+  .sp-dates span {
+    color: var(--gold); font-weight: 600;
+  }
+  .sp-duration strong {
+    color: var(--text); font-weight: 600; transition: color 0.3s;
+  }
+
+  /* overlay behind panel — catches clicks outside to close */
+  
+  
+  body.dark 
+
+  /* ── CURSOR LINE ── */
+  .timeline-wrap { position: relative; }
+  .cursor-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--text-mid);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.12s;
+  }
+  .cursor-label {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Cinzel', serif; font-size: 0.65rem;
+    font-weight: 600; letter-spacing: 0.06em;
+    color: var(--bg3);
+    background: var(--text-mid);
+    padding: 3px 8px; border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: var(--shadow);
+  }
+
+  /* ── SEGMENT DATE LABELS ── */
+  .seg-date-start, .seg-date-end {
+    position: absolute;
+    top: -18px;
+    font-family: 'Cinzel', serif; font-size: 0.52rem;
+    font-weight: 600; letter-spacing: 0.04em;
+    color: var(--text-dim);
+    white-space: nowrap;
+    pointer-events: none;
+    transition: color 0.3s;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .seg-date-start { left: 0; transform: translateX(-50%); }
+  .seg-date-end   { right: 0; transform: translateX(50%); }
+
+  /* Show dates on track hover */
+  .planet-track:hover .seg-date-start,
+  .planet-track:hover .seg-date-end { opacity: 1; }
+
+  /* ── PULSE ANIMATION ── */
+  @keyframes segPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.0); filter: brightness(1); }
+    40%  { box-shadow: 0 0 8px 3px rgba(255,255,255,0.35); filter: brightness(1.15); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.0); filter: brightness(1); }
+  }
+  .seg-pulse {
+    animation: segPulse 1.4s ease-in-out;
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex; justify-content: center; margin-bottom: 14px;
+  }
+  .toggle-btn {
+    background: var(--toggle-bg, rgba(0,0,0,0.06));
+    border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 20px;
+    color: var(--text-dim); font-family: 'Cinzel', serif;
+    font-size: 0.62rem; letter-spacing: 0.10em; cursor: pointer;
+    text-transform: uppercase; transition: all 0.2s; box-shadow: var(--shadow);
+  }
+  .toggle-btn.active {
+    background: rgba(138,104,32,0.12);
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  body.dark .toggle-btn.active {
+    background: rgba(200,169,110,0.15);
+  }
+  .toggle-btn:hover { opacity: 0.82; }
+
+  /* ── ASPECT TOOLTIP ── */
+  
+  
+  
+  
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <header>
+    <div class="header-text">
+      <h1>Tranzyty Powolnych Planet</h1>
+      <p>Interaktywna oś czasu</p>
+      <p class="header-author">© Astrologia Ewolucyjna</p>
+    </div>
+    <button id="darkToggle" title="Tryb ciemny / jasny">🌙</button>
+  </header>
+
+  <div class="legend" id="legend"></div>
+  
+
+  <div class="timeline-wrap" id="timelineWrap">
+    <div class="cursor-line" id="cursorLine">
+      <div class="cursor-label" id="cursorLabel"></div>
+    </div>
+    <div class="chart-scroll" id="chartScroll">
+      <div class="chart-inner" id="chartInner"></div>
+    </div>
+  </div>
+
+  <div class="brush-wrap">
+    <div class="brush-labels">
+      <span class="brush-year" id="brushLabelStart">2000</span>
+      <span class="brush-hint">przeciągnij zakres · przesuń okno</span>
+      <span class="brush-year" id="brushLabelEnd">2060</span>
+    </div>
+    <div class="brush-track" id="brushTrack">
+      <div class="brush-sel"    id="brushSel"></div>
+      <div class="brush-handle" id="brushLeft"></div>
+      <div class="brush-handle" id="brushRight"></div>
+    </div>
+    <div class="brush-axis" id="brushAxis"></div>
+  </div>
+
+  <footer-note>Dane oparte na efemerydach astronomicznych. Daty mogą nieznacznie różnić się ze względu na retrogradacje.</footer-note>
+
+<script>
+// ── DARK MODE ──────────────────────────────
+document.getElementById('darkToggle').addEventListener('click', function () {
+  document.body.classList.toggle('dark');
+  this.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+});
+
+// ── DATA ──────────────────────────────────
+const SIGNS = {
+  'Baran':'♈','Byk':'♉','Bliźnięta':'♊','Rak':'♋',
+  'Lew':'♌','Panna':'♍','Waga':'♎','Skorpion':'♏',
+  'Strzelec':'♐','Koziorożec':'♑','Wodnik':'♒','Ryby':'♓'
+};
+
+const SIGN_COLORS = {
+  // Ogień — pastelowy czerwony
+  'Baran':      '#e89090',
+  'Lew':        '#e07878',
+  'Strzelec':   '#d86868',
+  // Ziemia — pastelowy zielony
+  'Byk':        '#80c87e',
+  'Panna':      '#70bc6e',
+  'Koziorożec': '#60b05e',
+  // Powietrze — pastelowy żółty
+  'Bliźnięta':  '#d8c060',
+  'Waga':       '#ccb450',
+  'Wodnik':     '#c0a840',
+  // Woda — pastelowy niebieski
+  'Rak':        '#78b8e0',
+  'Skorpion':   '#68aad8',
+  'Ryby':       '#589cd0',
+};
+
+// Ingress dates from Swiss Ephemeris / Cafe Astrology / AstroButterfly
+// First direct ingress = definitive entry after all retrogrades resolved
+const PLANETS = [
+  {
+    id: 'pluto', name: 'Pluton', symbol: '♇', color: '#b06090',
+    transits: [
+      { sign: 'Strzelec',   start: 1995.0438, end: 2008.0656 }, // 17 Jan 1995 – 25 Jan 2008
+      { sign: 'Koziorożec', start: 2008.0656, end: 2024.8798 }, // 25 Jan 2008 – 19 Nov 2024
+      { sign: 'Wodnik',     start: 2024.8798, end: 2043.1836 }, // 19 Nov 2024 – 9 Mar 2043
+      { sign: 'Ryby',       start: 2043.1836, end: 2066.4644 }, // 9 Mar 2043 – ~18 Jun 2066
+    ]
+  },
+  {
+    id: 'neptune', name: 'Neptun', symbol: '♆', color: '#4868c8',
+    transits: [
+      { sign: 'Koziorożec', start: 1984.0492, end: 1998.0767 }, // 19 Jan 1984 – 29 Jan 1998
+      { sign: 'Wodnik',     start: 1998.0767, end: 2012.0902 }, // 29 Jan 1998 – 3 Feb 2012
+      { sign: 'Ryby',       start: 2012.0902, end: 2026.0685 }, // 3 Feb 2012 – 26 Jan 2026
+      { sign: 'Baran',      start: 2026.0685, end: 2038.8082 }, // 26 Jan 2026 – ~23 Oct 2038
+      { sign: 'Byk',        start: 2038.8082, end: 2052.5 },    // ~2038–2052
+    ]
+  },
+  {
+    id: 'uranus', name: 'Uran', symbol: '♅', color: '#1898a0',
+    transits: [
+      { sign: 'Wodnik',    start: 1996.0301, end: 2003.1863 }, // 12 Jan 1996 – 10 Mar 2003
+      { sign: 'Ryby',      start: 2003.1863, end: 2011.189  }, // 10 Mar 2003 – 11 Mar 2011
+      { sign: 'Baran',     start: 2011.189,  end: 2018.3671 }, // 11 Mar 2011 – 15 May 2018
+      { sign: 'Byk',       start: 2018.3671, end: 2026.3123 }, // 15 May 2018 – 25 Apr 2026
+      { sign: 'Bliźnięta', start: 2026.3123, end: 2033.4548 }, // 25 Apr 2026 – ~16 Jun 2033
+      { sign: 'Rak',       start: 2033.4548, end: 2040.5109 }, // ~2033 – ~2040
+      { sign: 'Lew',       start: 2040.5109, end: 2047.5    }, // ~2040 – ~2047
+    ]
+  },
+  {
+    id: 'saturn', name: 'Saturn', symbol: '♄', color: '#8a6030',
+    transits: [
+      { sign: 'Koziorożec', start: 2017.9644, end: 2020.2158 }, // 19 Dec 2017 – 21 Mar 2020
+      { sign: 'Wodnik',     start: 2020.2158, end: 2023.1781 }, // 21 Mar 2020 – 7 Mar 2023
+      { sign: 'Ryby',       start: 2023.1781, end: 2025.3918 }, // 7 Mar 2023 – 24 May 2025 (final)
+      { sign: 'Baran',      start: 2025.3918, end: 2028.276  }, // 24 May 2025 – ~12 Apr 2028
+      { sign: 'Byk',        start: 2028.276,  end: 2030.4466 }, // ~Apr 2028 – ~Jun 2030
+      { sign: 'Bliźnięta',  start: 2030.4466, end: 2032.5273 }, // ~Jun 2030 – ~Jul 2032
+      { sign: 'Rak',        start: 2032.5273, end: 2034.6247 }, // ~Jul 2032 – ~Aug 2034
+      { sign: 'Lew',        start: 2034.6247, end: 2036.7104 }, // ~Aug 2034 – ~Sep 2036
+      { sign: 'Panna',      start: 2036.7104, end: 2038.8356 }, // ~Sep 2036 – ~Nov 2038
+      { sign: 'Waga',       start: 2038.8356, end: 2041.0055 }, // ~Nov 2038 – ~Jan 2041
+      { sign: 'Skorpion',   start: 2041.0055, end: 2043.1918 }, // ~Jan 2041 – ~Mar 2043
+      { sign: 'Strzelec',   start: 2043.1918, end: 2045.3644 }, // ~Mar 2043 – ~May 2045
+      { sign: 'Koziorożec', start: 2045.3644, end: 2048.0    }, // ~May 2045 – ~2048
+    ]
+  },
+  {
+    id: 'chiron', name: 'Chiron', symbol: '⚷', color: '#7aaa60',
+    transits: [
+      { sign: 'Strzelec',   start: 1988.4672, end: 2001.9425 }, // 21 Jun 1988 – 11 Dec 2001
+      { sign: 'Koziorożec', start: 2001.9425, end: 2005.1397 }, // 11 Dec 2001 – 21 Feb 2005
+      { sign: 'Wodnik',     start: 2005.1397, end: 2010.2986 }, // 21 Feb 2005 – 20 Apr 2010
+      { sign: 'Ryby',       start: 2010.2986, end: 2018.2904 }, // 20 Apr 2010 – 17 Apr 2018
+      { sign: 'Baran',      start: 2018.2904, end: 2027.2822 }, // 17 Apr 2018 – 14 Apr 2027
+      { sign: 'Byk',        start: 2027.2822, end: 2033.4137 }, // 14 Apr 2027 – ~Jun 2033
+      { sign: 'Bliźnięta',  start: 2033.4137, end: 2038.4137 }, // ~2033 – ~2038
+      { sign: 'Rak',        start: 2038.4137, end: 2043.4137 }, // ~2038 – ~2043
+      { sign: 'Lew',        start: 2043.4137, end: 2047.4137 }, // ~2043 – ~2047
+      { sign: 'Panna',      start: 2047.4137, end: 2051.5    }, // ~2047 – ~2051
+    ]
+  },
+];
+
+const ASPECTS = [];
+
+// ── STATE ─────────────────────────────────
+let rangeStart = 1985;
+let rangeEnd   = 2065;
+let hiddenPlanets = new Set();
+let showAspects = false;
+
+const NOW_YEAR = (function () {
+  const d = new Date();
+  return d.getFullYear() + d.getMonth() / 12;
+}());
+
+function pct(year) {
+  return (year - rangeStart) / (rangeEnd - rangeStart) * 100;
+}
+
+// ── LEGEND ────────────────────────────────
+function buildLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  PLANETS.forEach(function (p) {
+    const div = document.createElement('div');
+    div.className = 'legend-item' + (hiddenPlanets.has(p.id) ? ' hidden' : '');
+    div.innerHTML =
+      '<div class="legend-dot" style="background:' + p.color + '"></div>' +
+      '<span class="legend-sym" style="color:' + p.color + '">' + p.symbol + '</span>' +
+      '<span class="legend-name">' + p.name + '</span>';
+    div.addEventListener('click', function () {
+      if (hiddenPlanets.has(p.id)) hiddenPlanets.delete(p.id);
+      else hiddenPlanets.add(p.id);
+      render();
+    });
+    el.appendChild(div);
+  });
+}
+
+// ── YEAR AXIS ─────────────────────────────
+function buildYearAxis(container) {
+  const axis = document.createElement('div');
+  axis.className = 'year-axis';
+  for (let y = rangeStart; y <= rangeEnd; y++) {
+    const p = pct(y);
+    if (p < 0 || p > 100) continue;
+    const isMajor = (y % 10 === 0);
+    const isMid   = (y % 5  === 0);
+    const tick = document.createElement('div');
+    tick.className = 'year-tick ' + (isMajor ? 'major' : isMid ? 'mid' : 'minor');
+    tick.style.left = p + '%';
+    const line = document.createElement('div');
+    line.className = 'tick-line';
+    tick.appendChild(line);
+    if (isMajor || isMid) {
+      const lbl = document.createElement('span');
+      lbl.textContent = y;
+      tick.appendChild(lbl);
+    }
+    axis.appendChild(tick);
+  }
+  container.appendChild(axis);
+}
+
+// ── PLANET ROWS ───────────────────────────
+function buildPlanetRow(container, planet, showNowLabel) {
+  const row = document.createElement('div');
+  row.className = 'planet-row' + (hiddenPlanets.has(planet.id) ? ' hidden' : '');
+
+  // Label
+  const lbl = document.createElement('div');
+  lbl.className = 'planet-label';
+  lbl.innerHTML =
+    '<span class="planet-symbol" style="color:' + planet.color + '">' + planet.symbol + '</span>' +
+    '<span class="planet-name-lbl">' + planet.name + '</span>';
+  row.appendChild(lbl);
+
+  // Track
+  const track = document.createElement('div');
+  track.className = 'planet-track';
+
+  // "Now" line — label only on first row
+  if (NOW_YEAR >= rangeStart && NOW_YEAR <= rangeEnd) {
+    const nl = document.createElement('div');
+    nl.className = 'now-line';
+    nl.style.left = pct(NOW_YEAR) + '%';
+    if (showNowLabel) {
+      const nlbl = document.createElement('div');
+      nlbl.className = 'now-label';
+      nlbl.textContent = 'TERAZ';
+      nl.appendChild(nlbl);
+    }
+    track.appendChild(nl);
+  }
+
+  // Segments
+  planet.transits.forEach(function (t) {
+    const left  = pct(t.start);
+    const right = pct(t.end);
+    if (right < 0 || left > 100) return;
+    const cl = Math.max(0, left);
+    const cw = Math.min(100, right) - cl;
+    if (cw <= 0) return;
+
+    const col       = SIGN_COLORS[t.sign] || '#aaa';
+    const isCurrent = (NOW_YEAR >= t.start && NOW_YEAR < t.end);
+
+    const seg = document.createElement('div');
+    seg.className = 'transit-seg';
+    seg.style.left        = cl + '%';
+    seg.style.width       = cw + '%';
+    seg.style.background  = col + (isCurrent ? 'cc' : '55');
+    seg.style.borderColor = col + (isCurrent ? 'ff' : '99');
+    if (isCurrent) seg.style.boxShadow = '0 0 10px ' + col + '55';
+
+    // Label inside segment
+    const inner = document.createElement('div');
+    inner.className = 'seg-inner';
+
+    const sym = document.createElement('span');
+    sym.className = 'seg-sym';
+    sym.textContent = SIGNS[t.sign] || '';
+    inner.appendChild(sym);
+
+    if (cw > 5.5) {
+      const name = document.createElement('span');
+      name.className = 'seg-name';
+      name.textContent = t.sign;
+      inner.appendChild(name);
+    }
+
+    // Duration label — show when enough space
+    if (cw > 10) {
+      const dur = document.createElement('span');
+      dur.className = 'seg-dur';
+      var years = (t.end - t.start);
+      dur.textContent = '~' + Math.round(years) + ' lat';
+      inner.appendChild(dur);
+    }
+
+    seg.appendChild(inner);
+
+    // Date labels (visible on track hover)
+    var MONTHS_SHORT = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    function segFmtDate(y, approx) {
+      var yr = Math.floor(y);
+      var m  = Math.min(11, Math.round((y - yr) * 12));
+      return (approx ? 'ok. ' : '') + MONTHS_SHORT[m] + ' ' + yr;
+    }
+    var PRECISE_CUT = 2030.0;
+
+    // Only show start date if segment starts inside visible range (not clipped on left)
+    if (left >= 0) {
+      var ds = document.createElement('div');
+      ds.className = 'seg-date-start';
+      ds.textContent = segFmtDate(t.start, t.start > PRECISE_CUT);
+      seg.appendChild(ds);
+    }
+    // Only show end date if segment ends inside visible range (not clipped on right)
+    if (right <= 100) {
+      var de = document.createElement('div');
+      de.className = 'seg-date-end';
+      de.textContent = segFmtDate(t.end, t.end > PRECISE_CUT);
+      seg.appendChild(de);
+    }
+
+    seg.style.cursor = 'pointer';
+    (function(p, t, ic) {
+      
+    }(planet, t, isCurrent));
+    track.appendChild(seg);
+  });
+
+  row.appendChild(track);
+  container.appendChild(row);
+}
+
+// ── ASPECTS BAR ───────────────────────────
+function buildAspectsBar(container) {
+  const section = document.createElement('div');
+  section.className = 'aspects-section';
+
+  const titleRow = document.createElement('div');
+  titleRow.style.cssText = 'display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px;';
+
+  const title = document.createElement('div');
+  title.className = 'aspects-title';
+  title.style.marginBottom = '0';
+  title.textContent = 'Aspekty';
+  titleRow.appendChild(title);
+
+  // mini legend for aspect types
+  var aspTypes = [
+    { sym:'☌', label:'koniunkcja', color:'#9060b0' },
+    { sym:'☍', label:'opozycja',   color:'#c04040' },
+    { sym:'△', label:'trygon',     color:'#40a060' },
+    { sym:'□', label:'kwadratura', color:'#d08020' },
+  ];
+  aspTypes.forEach(function(at) {
+    var leg = document.createElement('span');
+    leg.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-family:Cinzel,serif;font-size:0.55rem;letter-spacing:0.05em;color:var(--text-dim);';
+    leg.innerHTML = '<span style="color:' + at.color + ';font-size:0.75rem;">' + at.sym + '</span>' + at.label;
+    titleRow.appendChild(leg);
+  });
+  section.appendChild(titleRow);
+
+  const row = document.createElement('div');
+  row.className = 'aspects-row';
+
+  // Row dimensions (px) — must match CSS .aspects-row height
+  const ROW_H   = 126;
+  const DOT_R   = 11;  // half of 22px dot
+  const STEM_H  = 14;  // stem length each side
+  const dotTop  = ROW_H / 2 - DOT_R; // vertical centre of dot
+  const DOT_FULL = DOT_R * 2;
+
+  // Filter visible aspects
+  const visible = ASPECTS.map(function(asp) {
+    return { asp: asp, p: pct(asp.year) };
+  }).filter(function(a) { return a.p >= 0 && a.p <= 100; });
+
+  // Alternately assign label ABOVE or BELOW the dot
+  // using a greedy per-side collision check
+  var lastAbovePct = -999, lastBelowPct = -999;
+  const chartW   = document.getElementById('chartInner').offsetWidth || 900;
+  const minGapPct = 110 / chartW * 100; // ~110px label width
+
+  visible.forEach(function(item, i) {
+    // Prefer alternating; pick whichever side has enough room
+    var canAbove = (item.p - lastAbovePct) >= minGapPct;
+    var canBelow = (item.p - lastBelowPct) >= minGapPct;
+    var above;
+    if (canAbove && canBelow) {
+      above = (i % 2 === 0); // alternate
+    } else if (canAbove) {
+      above = true;
+    } else if (canBelow) {
+      above = false;
+    } else {
+      above = (i % 2 === 0); // fallback
+    }
+    if (above) lastAbovePct = item.p; else lastBelowPct = item.p;
+    item.above = above;
+  });
+
+  visible.forEach(function(item) {
+    var asp   = item.asp;
+    var p     = item.p;
+    var above = item.above;
+
+    // dot with aspect type symbol
+    const dot = document.createElement('div');
+    dot.className = 'asp-dot';
+    dot.style.left       = p + '%';
+    dot.style.background = asp.color;
+    dot.style.boxShadow  = '0 0 10px ' + asp.color + ', 0 0 22px ' + asp.color + '50';
+    // Store full label for tooltip
+    dot.dataset.tooltip = asp.label;
+    // type symbol inside dot
+    var dotSym = document.createElement('span');
+    dotSym.className = 'asp-dot-sym';
+    dotSym.textContent = asp.type || '☌';
+    dot.appendChild(dotSym);
+    row.appendChild(dot);
+
+    if (above) {
+      // stem from dot top upward
+      const stem = document.createElement('div');
+      stem.className = 'asp-stem-up';
+      stem.style.left   = p + '%';
+      stem.style.height = STEM_H + 'px';
+      stem.style.top    = (dotTop - STEM_H) + 'px';
+      row.appendChild(stem);
+
+      // label above stem
+      const lbl = document.createElement('div');
+      lbl.className   = 'asp-label';
+      lbl.style.left  = p + '%';
+      lbl.style.color = asp.color;
+      lbl.style.bottom = (ROW_H - dotTop + STEM_H) + 'px';
+      var lblParts = asp.label.split('\n');
+      lbl.innerHTML = lblParts[0];
+      row.appendChild(lbl);
+    } else {
+      // stem from dot bottom downward
+      const stem = document.createElement('div');
+      stem.className = 'asp-stem-down';
+      stem.style.left   = p + '%';
+      stem.style.height = STEM_H + 'px';
+      stem.style.top    = (dotTop + DOT_FULL) + 'px';
+      row.appendChild(stem);
+
+      // label below stem
+      const lbl = document.createElement('div');
+      lbl.className  = 'asp-label';
+      lbl.style.left = p + '%';
+      lbl.style.color = asp.color;
+      lbl.style.top   = (dotTop + DOT_FULL + STEM_H) + 'px';
+      var lblParts = asp.label.split('\n');
+      lbl.innerHTML = lblParts[0];
+      row.appendChild(lbl);
+    }
+  });
+
+  section.appendChild(row);
+  container.appendChild(section);
+}
+
+// ── RENDER ────────────────────────────────
+function render() {
+  const inner = document.getElementById('chartInner');
+  inner.innerHTML = '';
+  buildLegend();
+  buildYearAxis(inner);
+  PLANETS.forEach(function (p, idx) {
+    buildPlanetRow(inner, p, idx === 0);
+    const div = document.createElement('div');
+    div.className = 'row-divider';
+    inner.appendChild(div);
+  });
+  if (showAspects) buildAspectsBar(inner);
+
+  // Pulse animation on first load only
+  if (!render._pulsed) {
+    render._pulsed = true;
+    setTimeout(function() {
+      var segs = document.querySelectorAll('.transit-seg');
+      segs.forEach(function(seg, i) {
+        setTimeout(function() { seg.classList.add('seg-pulse'); }, i * 18);
+      });
+    }, 400);
+  }
+}
+
+// ── ASPECTS TOGGLE ────────────────────────────
+
+// ── BRUSH NAVIGATOR ───────────────────────
+const BMIN = 1980, BMAX = 2065, BMIN_SPAN = 5;
+
+const brushTrack  = document.getElementById('brushTrack');
+const brushSel    = document.getElementById('brushSel');
+const brushLeft   = document.getElementById('brushLeft');
+const brushRight  = document.getElementById('brushRight');
+const brushAxis   = document.getElementById('brushAxis');
+const lblStart    = document.getElementById('brushLabelStart');
+const lblEnd      = document.getElementById('brushLabelEnd');
+
+function bPct(year) { return (year - BMIN) / (BMAX - BMIN) * 100; }
+function bYear(p)   { return Math.round(BMIN + p / 100 * (BMAX - BMIN)); }
+
+function updateBrush() {
+  const lp = bPct(rangeStart);
+  const rp = bPct(rangeEnd);
+  brushSel.style.left   = lp + '%';
+  brushSel.style.width  = (rp - lp) + '%';
+  brushLeft.style.left  = lp + '%';
+  brushRight.style.left = rp + '%';
+  lblStart.textContent  = rangeStart;
+  lblEnd.textContent    = rangeEnd;
+}
+
+function buildBrushAxis() {
+  brushAxis.innerHTML = '';
+  for (let y = BMIN; y <= BMAX; y++) {
+    if (y % 5 !== 0) continue;
+    const tick = document.createElement('div');
+    tick.className = 'btick ' + (y % 10 === 0 ? 'major' : 'mid');
+    tick.style.left = bPct(y) + '%';
+    if (y % 10 === 0) {
+      const s = document.createElement('span');
+      s.textContent = y;
+      tick.appendChild(s);
+    }
+    brushAxis.appendChild(tick);
+  }
+}
+
+var drag = null;
+var dragX0 = 0, dragRange0 = null;
+
+function trackFrac(e) {
+  const rect = brushTrack.getBoundingClientRect();
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  return Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
+}
+
+function startDrag(e, type) {
+  e.preventDefault(); e.stopPropagation();
+  drag = type;
+  dragX0 = trackFrac(e);
+  dragRange0 = { s: rangeStart, e: rangeEnd };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend',  onUp);
+}
+
+brushLeft.addEventListener('mousedown',  function (e) { startDrag(e, 'left');  });
+brushRight.addEventListener('mousedown', function (e) { startDrag(e, 'right'); });
+brushSel.addEventListener('mousedown',   function (e) { startDrag(e, 'move');  });
+brushLeft.addEventListener('touchstart',  function (e) { startDrag(e, 'left');  }, { passive: false });
+brushRight.addEventListener('touchstart', function (e) { startDrag(e, 'right'); }, { passive: false });
+brushSel.addEventListener('touchstart',   function (e) { startDrag(e, 'move');  }, { passive: false });
+
+function onMove(e) {
+  if (!drag) return;
+  e.preventDefault();
+  const dx    = (trackFrac(e) - dragX0) * (BMAX - BMIN);
+  const span  = dragRange0.e - dragRange0.s;
+  if (drag === 'left') {
+    rangeStart = Math.max(BMIN, Math.min(Math.round(dragRange0.s + dx), dragRange0.e - BMIN_SPAN));
+  } else if (drag === 'right') {
+    rangeEnd = Math.min(BMAX, Math.max(Math.round(dragRange0.e + dx), dragRange0.s + BMIN_SPAN));
+  } else {
+    var ns = Math.round(dragRange0.s + dx);
+    var ne = ns + span;
+    if (ns < BMIN) { ns = BMIN; ne = ns + span; }
+    if (ne > BMAX) { ne = BMAX; ns = ne - span; }
+    rangeStart = ns; rangeEnd = ne;
+  }
+  updateBrush();
+  render();
+}
+
+function onUp() {
+  drag = null;
+  document.removeEventListener('mousemove', onMove);
+  document.removeEventListener('mouseup',   onUp);
+  document.removeEventListener('touchmove', onMove);
+  document.removeEventListener('touchend',  onUp);
+}
+
+brushTrack.addEventListener('click', function (e) {
+  if (drag) return;
+  const yr   = bYear(trackFrac(e) * 100);
+  const span = rangeEnd - rangeStart;
+  var ns = Math.round(yr - span / 2);
+  var ne = ns + span;
+  if (ns < BMIN) { ns = BMIN; ne = ns + span; }
+  if (ne > BMAX) { ne = BMAX; ns = ne - span; }
+  rangeStart = ns; rangeEnd = ne;
+  updateBrush();
+  render();
+});
+
+// ── INIT ──────────────────────────────────
+buildBrushAxis();
+updateBrush();
+render();
+
+// ── TRANSIT DATA ──────────────────────────
+const ELEMENTS = {
+  'Baran':'Ogień','Lew':'Ogień','Strzelec':'Ogień',
+  'Byk':'Ziemia','Panna':'Ziemia','Koziorożec':'Ziemia',
+  'Bliźnięta':'Powietrze','Waga':'Powietrze','Wodnik':'Powietrze',
+  'Rak':'Woda','Skorpion':'Woda','Ryby':'Woda',
+};
+const ELEMENT_COLORS = {
+  'Ogień':'#e07878','Ziemia':'#70bc6e','Powietrze':'#d8c060','Woda':'#78b8e0'
+};
+const ELEMENT_SYMBOLS = {
+  'Ogień':'🔥','Ziemia':'🌍','Powietrze':'🌬️','Woda':'💧'
+};
+
+const TRANSIT_DATA = {
+  'Pluton_Strzelec': {
+    desc: 'Pluton w Strzelcu przynosi głęboką transformację sfery ideologii, religii i systemów wierzeń. To czas gdy stare dogmaty rozpadają się pod wpływem nowych idei. Globalizacja i zderzenie cywilizacji, fundamentalizm religijny oraz poszukiwanie absolutnej prawdy — to dominujące tematy tego okresu.',
+    keywords: ['ideologia','religia','globalizacja','fundamentalizm','filozofia','podróże','wyższe wykształcenie','prawo'],
+  },
+  'Pluton_Koziorożec': {
+    desc: 'Pluton w Koziorożcu transformuje struktury władzy, system finansowy i korporacje. Stare instytucje, które nie spełniają już swojej roli, upadają lub zostają głęboko przebudowane. Kryzys finansowy 2008, nowe regulacje, koncentracja władzy i powolna erozja dotychczasowego ładu — to znaki tego tranzytu.',
+    keywords: ['władza','korporacje','system finansowy','struktury','rządy','kariera','ambicja','transformacja instytucji'],
+  },
+  'Pluton_Wodnik': {
+    desc: 'Pluton w Wodniku rewolucjonizuje zbiorową świadomość i technologię. Sztuczna inteligencja, sieci społeczne i ruchy kolektywne stają się narzędziami głębokiej zmiany. Pytania o wolność jednostki w erze inwigilacji, nowe definicje człowieczeństwa i demokracji bezpośredniej wypełniają tę epokę.',
+    keywords: ['AI','technologia','kolektyw','wolność','rewolucja','sieci społeczne','humanizm','przyszłość'],
+  },
+  'Pluton_Ryby': {
+    desc: 'Pluton w Rybach transformuje zbiorową nieświadomość i duchowość. Granice między realnością a iluzją rozpuszczają się. Głęboka przemiana religii, sztuki i zbiorowych snów. Kryzys ekologiczny oceanów, migracje i nowe formy mistycyzmu charakteryzują tę epokę.',
+    keywords: ['nieświadomość','duchowość','iluzja','morza i oceany','migracje','mistycyzm','rozpuszczenie granic'],
+  },
+  'Neptun_Koziorożec': {
+    desc: 'Neptun w Koziorożcu idealizuje struktury, kariery i systemy. To czas, gdy neoliberalizm stawał się niemal religią, a korporacje przyjmowały duchowy język. Rozmycie granic między biznesem a misją, pieniądz jako wartość duchowa.',
+    keywords: ['kariera','idealizacja struktur','neoliberalizm','rozmycie granic','status'],
+  },
+  'Neptun_Wodnik': {
+    desc: 'Neptun w Wodniku idealizuje technologię i braterstwo ludzkości. Internet jawi się jako medium duchowego połączenia. Rozmycie tożsamości, utopia globalnej wioski i idealizacja postępu technologicznego.',
+    keywords: ['internet','braterstwo','tożsamość','utopia','technologia','sieci'],
+  },
+  'Neptun_Ryby': {
+    desc: 'Neptun w Rybach — planety w swoim własnym domu. Wyjątkowe nasilenie wrażliwości zbiorowej, rozkwit ruchów duchowych, ezoteryki i terapii. Jednocześnie epidemie uzależnień, masowe iluzje i trudność z odróżnieniem prawdy od fałszu.',
+    keywords: ['duchowość','empatia','ezoteryka','uzależnienia','iluzja','sztuka','współczucie','morza'],
+  },
+  'Neptun_Baran': {
+    desc: 'Neptun w Baranie wnosi idealizm i duchowość w sferę tożsamości i działania. Nowe ruchy duchowe oparte na sile woli i heroizmie. Idealizacja pionierów i liderów. Rozmycie granic w obszarze konfliktów i asertywności.',
+    keywords: ['pionierstwo','duchowa siła','nowi liderzy','idealizm działania','tożsamość'],
+  },
+  'Neptun_Byk': {
+    desc: 'Neptun w Byku idealizuje naturę, piękno i zasoby materialne. Nowe podejście do ekonomii i wartości materialnych. Rozmycie granic własności, nowe formy pieniądza. Rozkwit ekologii i sztuki.',
+    keywords: ['natura','ekologia','piękno','ekonomia','wartości materialne','nowy pieniądz'],
+  },
+  'Uran_Wodnik': {
+    desc: 'Uran w Wodnikuma — planety we własnym domu. Eksplozja internetu i rewolucja cyfrowa przełomu wieków. Nagłe skoki technologiczne, nowe formy wolności jednostki i kolektywu. Narodziny globalnej sieci jako przestrzeni społecznej.',
+    keywords: ['internet','rewolucja cyfrowa','wolność','kolektyw','technologia','sieci','innowacja'],
+  },
+  'Uran_Ryby': {
+    desc: 'Uran w Rybach przynosi nagłe przełomy w sferze duchowości, sztuki i nieświadomości. Tsunami i katastrofy morskie. Rewolucja w medycynie alternatywnej i terapii. Nagłe zrywy mas, trudne do przewidzenia.',
+    keywords: ['duchowość','katastrofy','terapia','nieświadomość','morze','zrywy'],
+  },
+  'Uran_Baran': {
+    desc: 'Uran w Baranie wyzwala rewolucyjną energię działania. Arabska Wiosna, start-upy technologiczne, nowe definicje tożsamości. Błyskawiczne zmiany polityczne i kulturowe, rewolty jednostki przeciw systemowi.',
+    keywords: ['rewolucja','start-upy','tożsamość','bunt','pionierstwo','zmiany polityczne'],
+  },
+  'Uran_Byk': {
+    desc: 'Uran w Byku rewolucjonizuje finanse i stosunek do materii. Kryptowaluty i blockchain, rewolucja rolnicza, nagłe zmiany klimatyczne jako wstrząs dla zasobów Ziemi. Nowy stosunek do ciała i wartości.',
+    keywords: ['kryptowaluty','blockchain','finanse','klimat','zasoby','ciało','ziemia'],
+  },
+  'Uran_Bliźnięta': {
+    desc: 'Uran w Bliźniętach rewolucjonizuje komunikację i informację. AI jako partner dialogu, dezinformacja na niespotykaną skalę, nowe języki i media. Błyskawiczne zmiany w edukacji i sposobach myślenia.',
+    keywords: ['AI','komunikacja','dezinformacja','media','edukacja','języki','myślenie'],
+  },
+  'Uran_Rak': {
+    desc: 'Uran w Raku przynosi rewolucję w rozumieniu domu, rodziny i narodu. Nowe formy rodziny, migracje na dużą skalę, nagłe zmiany w poczuciu przynależności. Rewolucja w sferze emocjonalnej i bezpieczeństwa.',
+    keywords: ['dom','rodzina','naród','migracje','przynależność','bezpieczeństwo'],
+  },
+  'Uran_Lew': {
+    desc: 'Uran w Lwie przynosi rewolucję w twórczości, przywództwie i ekspresji. Nowe formy sztuki i rozrywki, nagłe zmiany liderów, rewolucja w sposobach wyrażania siebie.',
+    keywords: ['twórczość','przywódcy','sztuka','ekspresja','rewolucja kulturalna'],
+  },
+  'Saturn_Koziorożec': {
+    desc: 'Saturn w Koziorożcu — planeta w swoim własnym domu — to czas maksymalnej strukturyzacji i odpowiedzialności. Reguły i hierarchie są egzekwowane bez wyjątków. Czas żniw za wcześniejsze decyzje, budowania trwałych fundamentów lub bolesnej konfrontacji z zaległościami.',
+    keywords: ['struktura','odpowiedzialność','hierarchia','dyscyplina','fundamenty','kariera','czas'],
+  },
+  'Saturn_Wodnik': {
+    desc: 'Saturn w Wodniku buduje systemy służące zbiorowości, ale stawia granice wolności. Pandemia COVID stała się bolesną lekcją zbiorowej odpowiedzialności. Napięcie między wolnością jednostki a potrzebami kolektywu.',
+    keywords: ['kolektyw','systemy','wolność','odpowiedzialność zbiorowa','granice','sieci'],
+  },
+  'Saturn_Ryby': {
+    desc: 'Saturn w Rybach testuje granice wiary, sztuki i współczucia. Trudność z uchwyceniem niewidzialnych ograniczeń. Czas pracy z nieświadomością, duchowych sprawdzianów i konfrontacji z iluzjami.',
+    keywords: ['wiara','granice niewidzialne','nieświadomość','sztuka','iluzja','terapia','duchowość'],
+  },
+  'Saturn_Baran': {
+    desc: 'Saturn w Baranie strukturyzuje inicjatywę i asertywność. Lekcja zdrowej siły bez egoizmu. Czas budowania własnej drogi z dyscypliną i cierpliwością. Opóźnienia i przeszkody w nowych projektach.',
+    keywords: ['inicjatywa','asertywność','siła','dyscyplina','opóźnienia','własna droga'],
+  },
+  'Saturn_Byk': {
+    desc: 'Saturn w Byku przynosi lekcje materialne i finansowe. Czas ograniczeń budżetowych, pracy z zasobami i budowania trwałych wartości. Nagrody dla cierpliwych i pracowitych.',
+    keywords: ['finanse','zasoby','cierpliwość','wartości materialne','budowanie','praca'],
+  },
+  'Saturn_Bliźnięta': {
+    desc: 'Saturn w Bliźniętach uczy precyzji w komunikacji i odpowiedzialności za słowo. Strukturyzacja edukacji i myślenia. Trudności w komunikacji i podróżach, ale nagroda za rzetelność.',
+    keywords: ['komunikacja','precyzja','edukacja','słowo','myślenie','podróże'],
+  },
+  'Saturn_Rak': {
+    desc: 'Saturn w Raku stawia granice emocjonalne i rodzinne. Lekcja dojrzałej troski bez zależności. Konfrontacja z korzeniami i przeszłością rodzinną. Ciężar emocjonalny, ale i możliwość głębokiego uzdrowienia.',
+    keywords: ['rodzina','emocje','korzenie','granice emocjonalne','przeszłość','dom'],
+  },
+  'Saturn_Lew': {
+    desc: 'Saturn w Lwie sprawdza dojrzałość ego i twórczości. Lekcja przywództwa bez potrzeby podziwu. Ograniczenia w wyrażaniu siebie, które prowadzą do głębszej autentyczności.',
+    keywords: ['ego','twórczość','przywództwo','autentyczność','wyrażanie siebie'],
+  },
+  'Saturn_Panna': {
+    desc: 'Saturn w Pannie doskonali pracę i zdrowie przez rygor i analizę. Czas wysokich standardów i krytycznego myślenia. Lekcja perfekcji bez paraliżu analitycznego.',
+    keywords: ['praca','zdrowie','analiza','perfekcja','standardy','rygor'],
+  },
+  'Saturn_Waga': {
+    desc: 'Saturn jest egzaltowany w Wadze — tu wyraża się najpiękniej. Czas budowania sprawiedliwych relacji i umów. Lekcja równowagi, kompromisu i długotrwałych zobowiązań.',
+    keywords: ['sprawiedliwość','relacje','umowy','równowaga','kompromis','prawo'],
+  },
+  'Saturn_Skorpion': {
+    desc: 'Saturn w Skorpionie konfrontuje z ukrytą stroną władzy, finansami i przemijaniem. Czas głębokiej pracy z cieniami i zobowiązaniami. Transformacja przez ograniczenie i dyscyplinę.',
+    keywords: ['cień','władza','finanse','śmierć i transformacja','zobowiązania','głębia'],
+  },
+  'Saturn_Strzelec': {
+    desc: 'Saturn w Strzelcu wymaga odpowiedzialności za własną filozofię i wiarę. Strukturyzacja wiedzy i podróży. Czas weryfikacji przekonań i budowania mądrości na solidnych podstawach.',
+    keywords: ['filozofia','wiara','podróże','wiedza','przekonania','mądrość','prawo'],
+  },
+  'Chiron_Strzelec': {
+    desc: 'Chiron w Strzelcu rani i leczy w obszarze wiary, filozofii i poszukiwania sensu. Pokolenie które kwestionuje religię i dogmaty, szuka własnej ścieżki duchowej. Rana braku sensu i kierunku, uzdrawiana przez autentyczną mądrość.',
+    keywords: ['wiara','filozofia','sens życia','dogmaty','duchowość','podróże','mądrość'],
+  },
+  'Chiron_Koziorożec': {
+    desc: 'Chiron w Koziorożcu dotyka ran związanych z autorytetem, karierą i strukturami. Ból odrzucenia przez instytucje, uzdrawianie przez odpowiedzialność i własną strukturę. Krótki ale intensywny tranzyt.',
+    keywords: ['autorytet','kariera','struktury','odpowiedzialność','instytucje','odrzucenie'],
+  },
+  'Chiron_Wodnik': {
+    desc: 'Chiron w Wodniku rani w obszarze przynależności do grupy i oryginalności. Ból wykluczenia i bycia "innym". Uzdrawianie przez akceptację własnej wyjątkowości i tworzenie wspólnot opartych na autentyczności.',
+    keywords: ['przynależność','wykluczenie','oryginalność','wspólnota','inność','akceptacja'],
+  },
+  'Chiron_Ryby': {
+    desc: 'Chiron w Rybach dotyka najgłębszych ran zbiorowych — bólu niewidzialności, zatracenia siebie, duchowego zagubienia. Pokolenie uzdrawiające granicę między jaźnią a zbiorową nieświadomością. Wielki potencjał empatii i uzdrawiania.',
+    keywords: ['duchowość','empatia','granice','zatracenie','uzdrawianie','nieświadomość','współczucie'],
+  },
+  'Chiron_Baran': {
+    desc: 'Chiron w Baranie — rana tożsamości i prawa do istnienia. Pytanie "czy mam prawo być sobą?". Uzdrawianie przez odwagę bycia pierwszym, inicjatywę i asertywność. Pokolenie pionierów transformacji osobistej.',
+    keywords: ['tożsamość','inicjatywa','odwaga','asertywność','prawo do istnienia','pionierstwo'],
+  },
+  'Chiron_Byk': {
+    desc: 'Chiron w Byku rani w obszarze wartości materialnych, ciała i poczucia bezpieczeństwa. Ból niewystarczalności zasobów lub odcięcia od ciała. Uzdrawianie przez głęboki kontakt z naturą i własną cielesnością.',
+    keywords: ['ciało','zasoby','bezpieczeństwo','natura','wartości','niewystarczalność'],
+  },
+  'Chiron_Bliźnięta': {
+    desc: 'Chiron w Bliźniętach dotyka ran komunikacyjnych — trudności w wyrażeniu siebie, bycia niezrozumianym. Uzdrawianie przez naukę prawdziwego dialogu i nauczanie innych z własnych doświadczeń.',
+    keywords: ['komunikacja','wyrażanie siebie','niezrozumienie','dialog','nauczanie','słowo'],
+  },
+  'Chiron_Rak': {
+    desc: 'Chiron w Raku rani w sferze rodziny, domu i emocjonalnego bezpieczeństwa. Uzdrawianie ran rodzinnych i dziedziczonych wzorców. Potencjał głębokiego uzdrawiania przez troskę i tworzenie bezpiecznej przestrzeni.',
+    keywords: ['rodzina','dom','bezpieczeństwo emocjonalne','wzorce rodzinne','troska','korzenie'],
+  },
+  'Chiron_Lew': {
+    desc: 'Chiron w Lwie rani w obszarze twórczości, uznania i wyrażania siebie. Ból braku docenienia własnej wyjątkowości. Uzdrawianie przez odważne tworzenie i odnajdywanie radości w ekspresji.',
+    keywords: ['twórczość','uznanie','ekspresja','wyjątkowość','radość','przywództwo'],
+  },
+  'Chiron_Panna': {
+    desc: 'Chiron w Pannie rani przez perfekcjonizm, poczucie niedoskonałości i krytykę. Uzdrawianie przez akceptację własnych ograniczeń i służbę innym ze swoich "niedoskonałości".',
+    keywords: ['perfekcjonizm','służba','zdrowie','niedoskonałość','praca','analiza','uzdrawianie'],
+  },
+};
+
+const MONTHS_PL = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+function fmtDate(y, approx) {
+  var yr = Math.floor(y);
+  var m  = Math.min(11, Math.round((y - yr) * 12));
+  return (approx ? 'ok. ' : '') + MONTHS_PL[m] + ' ' + yr;
+}
+
+// ── DRAG TO PAN ───────────────────────────
+(function() {
+  var wrap        = document.getElementById('timelineWrap');
+  var chartScroll = document.getElementById('chartScroll');
+  var LABEL_W     = 110;
+  var isPanning   = false;
+  var panStartX   = 0;
+  var panStartRange = null;
+
+  function getTrackWidth() {
+    var chartInner = document.getElementById('chartInner');
+    return chartInner.offsetWidth - LABEL_W - 14;
+  }
+
+  wrap.addEventListener('mousedown', function(e) {
+    // only left button, ignore clicks on segments/handles
+    if (e.button !== 0) return;
+    if (e.target.classList.contains('transit-seg')) return;
+    if (e.target.classList.contains('brush-handle')) return;
+    if (e.target.classList.contains('brush-sel')) return;
+
+    isPanning     = true;
+    panStartX     = e.clientX;
+    panStartRange = { start: rangeStart, end: rangeEnd };
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isPanning) return;
+    var span    = panStartRange.end - panStartRange.start;
+    var trackW  = getTrackWidth();
+    var dx      = e.clientX - panStartX;
+    // pixels to years
+    var deltaYears = -(dx / trackW) * span;
+
+    var ns = panStartRange.start + deltaYears;
+    var ne = panStartRange.end   + deltaYears;
+
+    if (ns < BMIN) { ns = BMIN; ne = ns + span; }
+    if (ne > BMAX) { ne = BMAX; ns = ne - span; }
+
+    rangeStart = Math.round(ns);
+    rangeEnd   = Math.round(ne);
+    updateBrush();
+    render();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!isPanning) return;
+    isPanning = false;
+    wrap.style.cursor = '';
+  });
+
+  // cursor hint on hover
+  wrap.addEventListener('mouseover', function(e) {
+    if (isPanning) return;
+    if (e.target === wrap ||
+        e.target.classList.contains('chart-scroll') ||
+        e.target.classList.contains('chart-inner') ||
+        e.target.classList.contains('planet-track') ||
+        e.target.classList.contains('year-axis')) {
+      wrap.style.cursor = 'grab';
+    }
+  });
+  wrap.addEventListener('mouseout', function() {
+    if (!isPanning) wrap.style.cursor = '';
+  });
+}());
+
+// ── SCROLL WHEEL ZOOM ─────────────────────
+(function() {
+  var wrap        = document.getElementById('timelineWrap');
+  var chartScroll = document.getElementById('chartScroll');
+  var LABEL_W     = 110;
+
+  wrap.addEventListener('wheel', function(e) {
+    e.preventDefault();
+
+    var chartInner = document.getElementById('chartInner');
+    var trackW     = chartInner.offsetWidth - LABEL_W - 14;
+
+    // Which year is under the cursor?
+    var wrapRect        = wrap.getBoundingClientRect();
+    var xInWrap         = e.clientX - wrapRect.left;
+    var xInChart        = xInWrap + chartScroll.scrollLeft - LABEL_W;
+    var frac            = Math.max(0, Math.min(1, xInChart / trackW));
+    var yearUnderCursor = rangeStart + frac * (rangeEnd - rangeStart);
+
+    // scroll up = zoom in, scroll down = zoom out
+    var factor  = e.deltaY > 0 ? 1.22 : 0.82;
+    var span    = rangeEnd - rangeStart;
+    var newSpan = Math.min(BMAX - BMIN, Math.max(3, span * factor));
+
+    // Keep the year under cursor pinned to same screen position
+    var newStart = yearUnderCursor - frac * newSpan;
+    var newEnd   = newStart + newSpan;
+
+    // Clamp to brush bounds
+    if (newStart < BMIN) { newStart = BMIN; newEnd = newStart + newSpan; }
+    if (newEnd   > BMAX) { newEnd   = BMAX; newStart = newEnd - newSpan; }
+
+    rangeStart = Math.round(newStart);
+    rangeEnd   = Math.round(newEnd);
+
+    updateBrush();
+    render();
+  }, { passive: false });
+}());
+
+// ── CURSOR LINE ───────────────────────────
+(function() {
+  var cursorLine  = document.getElementById('cursorLine');
+  var cursorLabel = document.getElementById('cursorLabel');
+  var wrap        = document.getElementById('timelineWrap');
+  var chartScroll = document.getElementById('chartScroll');
+  var MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+  var LABEL_W = 110; // planet label column width px
+
+  wrap.addEventListener('mousemove', function(e) {
+    var wrapRect = wrap.getBoundingClientRect();
+    // x relative to the wrap left edge
+    var xInWrap = e.clientX - wrapRect.left;
+
+    // position the cursor line
+    cursorLine.style.left    = xInWrap + 'px';
+    cursorLine.style.opacity = '0.7';
+
+    // convert to year:
+    // track starts at LABEL_W px from left of chart-inner
+    // chart-inner may be scrolled
+    var chartInner = document.getElementById('chartInner');
+    var trackW = chartInner.offsetWidth - LABEL_W - 14;
+    var xInChart = xInWrap + chartScroll.scrollLeft - LABEL_W;
+    var frac = Math.max(0, Math.min(1, xInChart / trackW));
+    var year = rangeStart + frac * (rangeEnd - rangeStart);
+
+    // Format label
+    var label;
+    if ((rangeEnd - rangeStart) <= 30) {
+      var yr = Math.floor(year);
+      var m  = Math.min(11, Math.round((year - yr) * 12));
+      label = MONTHS[m] + ' ' + yr;
+    } else {
+      label = Math.round(year).toString();
+    }
+    cursorLabel.textContent = label;
+
+    // Flip label left if near right edge of wrap
+    if (xInWrap > wrapRect.width - 80) {
+      cursorLabel.style.left      = 'auto';
+      cursorLabel.style.right     = '4px';
+      cursorLabel.style.transform = 'none';
+    } else {
+      cursorLabel.style.left      = '50%';
+      cursorLabel.style.right     = 'auto';
+      cursorLabel.style.transform = 'translateX(-50%)';
+    }
+  });
+
+  wrap.addEventListener('mouseleave', function() {
+    cursorLine.style.opacity = '0';
+  });
+}());
+
+// ── ASPECT TOOLTIP ────────────────────────
+(function() {
+  var tooltip = document.getElementById('aspTooltip');
+
+  document.addEventListener('mouseover', function(e) {
+    var dot = e.target.closest('.asp-dot');
+    if (!dot || !dot.dataset.tooltip) return;
+    var parts = dot.dataset.tooltip.split('\n');
+    // parts[0] = planets+aspect symbol, parts[1] = date, parts[2] = sign
+    tooltip.innerHTML =
+      '<span class="asp-tooltip-date">' + (parts[1] || '') + '</span>' +
+      '<span class="asp-tooltip-sign">' + parts[0] + (parts[2] ? ' · ' + parts[2] : '') + '</span>';
+    tooltip.style.color = dot.style.background;
+    tooltip.classList.add('visible');
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!tooltip.classList.contains('visible')) return;
+    var x = e.clientX + 14;
+    var y = e.clientY - 36;
+    // keep inside viewport
+    if (x + 160 > window.innerWidth)  x = e.clientX - 170;
+    if (y < 8) y = e.clientY + 14;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top  = y + 'px';
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    if (!e.target.closest('.asp-dot')) return;
+    tooltip.classList.remove('visible');
+  });
+}());
+
+</script>
+</body>
+</html>
